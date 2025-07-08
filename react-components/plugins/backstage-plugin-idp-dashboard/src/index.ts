@@ -1,0 +1,11 @@
+export { idpDashboardPlugin } from './plugin';
+export { IdpDashboardPage } from './components/IdpDashboardPage';
+export { ServiceCatalogWidget } from './components/ServiceCatalogWidget';
+export { KubernetesOverviewWidget } from './components/KubernetesOverviewWidget';
+export { ArgoCDStatusWidget } from './components/ArgoCDStatusWidget';
+export { CIStatusWidget } from './components/CIStatusWidget';
+export { MonitoringWidget } from './components/MonitoringWidget';
+export { ResourceProvisioningWidget } from './components/ResourceProvisioningWidget';
+export { DeveloperMetricsWidget } from './components/DeveloperMetricsWidget';
+export { SecurityOverviewWidget } from './components/SecurityOverviewWidget';
+export { DocumentationWidget } from './components/DocumentationWidget'; 

@@ -1,0 +1,93 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: default
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd
+    app.kubernetes.io/part-of: internal-developer-platform
+spec:
+  description: Default project for Internal Developer Platform
+  sourceRepos:
+    - 'https://github.com/your-org/internal-developer-platform'
+    - 'https://github.com/your-org/*'
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+    - namespace: backstage
+      server: https://kubernetes.default.svc
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+    - namespace: monitoring
+      server: https://kubernetes.default.svc
+    - namespace: development
+      server: https://kubernetes.default.svc
+    - namespace: staging
+      server: https://kubernetes.default.svc
+    - namespace: production
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+    - group: 'rbac.authorization.k8s.io'
+      kind: ClusterRole
+    - group: 'rbac.authorization.k8s.io'
+      kind: ClusterRoleBinding
+    - group: 'argoproj.io'
+      kind: Application
+    - group: 'argoproj.io'
+      kind: AppProject
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Secret
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ServiceAccount
+    - group: ''
+      kind: PersistentVolumeClaim
+    - group: 'apps'
+      kind: Deployment
+    - group: 'apps'
+      kind: StatefulSet
+    - group: 'apps'
+      kind: DaemonSet
+    - group: 'networking.k8s.io'
+      kind: Ingress
+    - group: 'networking.k8s.io'
+      kind: NetworkPolicy
+    - group: 'rbac.authorization.k8s.io'
+      kind: Role
+    - group: 'rbac.authorization.k8s.io'
+      kind: RoleBinding
+    - group: 'autoscaling'
+      kind: HorizontalPodAutoscaler
+    - group: 'policy'
+      kind: PodDisruptionBudget
+  roles:
+    - name: admin
+      description: Admin role with full access
+      policies:
+        - p, proj:default:admin, applications, *, default/*, allow
+        - p, proj:default:admin, repositories, *, *, allow
+        - p, proj:default:admin, clusters, *, *, allow
+        - p, proj:default:admin, projects, *, default, allow
+      groups:
+        - platform-team
+    - name: developer
+      description: Developer role with limited access
+      policies:
+        - p, proj:default:developer, applications, get, default/*, allow
+        - p, proj:default:developer, applications, sync, default/development/*, allow
+        - p, proj:default:developer, applications, sync, default/staging/*, allow
+        - p, proj:default:developer, applications, get, default/production/*, allow
+      groups:
+        - developers
+    - name: viewer
+      description: Viewer role with read-only access
+      policies:
+        - p, proj:default:viewer, applications, get, default/*, allow
+      groups:
+        - viewers 

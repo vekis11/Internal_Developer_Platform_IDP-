@@ -1,0 +1,220 @@
+app:
+  title: Internal Developer Platform
+  baseUrl: http://localhost:3000
+  support:
+    url: https://github.com/your-org/internal-developer-platform/issues
+
+organization:
+  name: Your Organization
+
+backend:
+  baseUrl: http://localhost:7007
+  listen:
+    port: 7007
+    host: 0.0.0.0
+  cors:
+    origin: http://localhost:3000
+    credentials: true
+  database:
+    client: better-sqlite3
+    connection: ':memory:'
+  auth:
+    keys:
+      - secret: ${AUTH_SECRET}
+  cache:
+    store: memory
+
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN}
+  gitlab:
+    - host: gitlab.com
+      token: ${GITLAB_TOKEN}
+  azure:
+    - host: dev.azure.com
+      token: ${AZURE_TOKEN}
+  bitbucket:
+    - host: bitbucket.org
+      username: ${BITBUCKET_USERNAME}
+      appPassword: ${BITBUCKET_APP_PASSWORD}
+
+scaffolder:
+  github:
+    token: ${GITHUB_TOKEN}
+    visibility: public
+  gitlab:
+    api:
+      token: ${GITLAB_TOKEN}
+  azure:
+    token: ${AZURE_TOKEN}
+  bitbucket:
+    username: ${BITBUCKET_USERNAME}
+    appPassword: ${BITBUCKET_APP_PASSWORD}
+
+catalog:
+  import:
+    entityFilename: catalog-info.yaml
+    pullRequestBranchName: backstage-integration
+  rules:
+    - allow: [Component, System, API, Resource, Location]
+  locations:
+    # Local example data, file locations are relative to the backend process, typically `packages/backend`
+    - type: file
+      target: ../../examples/entities.yaml
+
+  processors:
+    githubOrg:
+      providers:
+        - target: https://github.com
+          apiBaseUrl: https://api.github.com
+          token: ${GITHUB_TOKEN}
+    gitlabOrg:
+      providers:
+        - target: https://gitlab.com
+          token: ${GITLAB_TOKEN}
+
+proxy:
+  '/test':
+    target: 'https://httpbin.org'
+    changeOrigin: true
+
+techdocs:
+  requestUrl: http://localhost:7007
+  storageUrl: http://localhost:7007/api/techdocs/static/docs
+  builder: 'local'
+  generators:
+    techdocs: 'docker'
+
+search:
+  elasticsearch:
+    provider: aws
+    aws:
+      region: us-west-2
+      auth:
+        accessKeyId: ${AWS_ACCESS_KEY_ID}
+        secretAccessKey: ${AWS_SECRET_ACCESS_KEY}
+
+auth:
+  environment: development
+  providers:
+    github:
+      development:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+    gitlab:
+      development:
+        clientId: ${AUTH_GITLAB_CLIENT_ID}
+        clientSecret: ${AUTH_GITLAB_CLIENT_SECRET}
+    okta:
+      development:
+        clientId: ${AUTH_OKTA_CLIENT_ID}
+        clientSecret: ${AUTH_OKTA_CLIENT_SECRET}
+        audience: ${AUTH_OKTA_AUDIENCE}
+        authServerId: ${AUTH_OKTA_AUTH_SERVER_ID}
+
+permission:
+  enabled: true
+  rbac:
+    admin:
+      users:
+        - name: user:default/guest
+          resourceRef: user:default/guest
+
+kubernetes:
+  serviceLocatorMethod:
+    type: 'multiTenant'
+  clusterLocatorMethods:
+    - type: 'config'
+      clusters:
+        - name: 'development'
+          url: 'https://kubernetes.default.svc'
+          authProvider: 'serviceAccount'
+          serviceAccountToken: ${K8S_SERVICE_ACCOUNT_TOKEN}
+        - name: 'staging'
+          url: 'https://staging-cluster.example.com'
+          authProvider: 'serviceAccount'
+          serviceAccountToken: ${K8S_STAGING_TOKEN}
+        - name: 'production'
+          url: 'https://production-cluster.example.com'
+          authProvider: 'serviceAccount'
+          serviceAccountToken: ${K8S_PROD_TOKEN}
+
+rollbar:
+  organization: ${ROLLBAR_ORGANIZATION}
+  apiToken: ${ROLLBAR_API_TOKEN}
+
+sentry:
+  organization: ${SENTRY_ORGANIZATION}
+  project: ${SENTRY_PROJECT}
+  token: ${SENTRY_TOKEN}
+
+pagerduty:
+  eventsBaseUrl: https://events.pagerduty.com
+  integrationKey: ${PAGERDUTY_INTEGRATION_KEY}
+
+airbrake:
+  projectId: ${AIRBRAKE_PROJECT_ID}
+  projectKey: ${AIRBRAKE_PROJECT_KEY}
+
+dynatrace:
+  baseUrl: ${DYNATRACE_BASE_URL}
+  apiToken: ${DYNATRACE_API_TOKEN}
+
+newrelic:
+  accountId: ${NEWRELIC_ACCOUNT_ID}
+  apiKey: ${NEWRELIC_API_KEY}
+
+graphql:
+  introspection: true
+
+plugins:
+  'backstage-plugin-kubernetes':
+    serviceLocatorMethod:
+      type: 'multiTenant'
+    clusterLocatorMethods:
+      - type: 'config'
+        clusters:
+          - name: 'development'
+            url: 'https://kubernetes.default.svc'
+            authProvider: 'serviceAccount'
+            serviceAccountToken: ${K8S_SERVICE_ACCOUNT_TOKEN}
+          - name: 'staging'
+            url: 'https://staging-cluster.example.com'
+            authProvider: 'serviceAccount'
+            serviceAccountToken: ${K8S_STAGING_TOKEN}
+          - name: 'production'
+            url: 'https://production-cluster.example.com'
+            authProvider: 'serviceAccount'
+            serviceAccountToken: ${K8S_PROD_TOKEN}
+
+  'backstage-plugin-argocd':
+    argocd:
+      baseUrl: ${ARGOCD_BASE_URL}
+      username: ${ARGOCD_USERNAME}
+      password: ${ARGOCD_PASSWORD}
+      token: ${ARGOCD_TOKEN}
+
+  'backstage-plugin-github-actions':
+    github:
+      token: ${GITHUB_TOKEN}
+
+  'backstage-plugin-jenkins':
+    jenkins:
+      baseUrl: ${JENKINS_BASE_URL}
+      username: ${JENKINS_USERNAME}
+      apiKey: ${JENKINS_API_KEY}
+
+  'backstage-plugin-sonarqube':
+    sonarqube:
+      baseUrl: ${SONARQUBE_BASE_URL}
+      apiKey: ${SONARQUBE_API_KEY}
+
+  'backstage-plugin-prometheus':
+    prometheus:
+      baseUrl: ${PROMETHEUS_BASE_URL}
+
+  'backstage-plugin-grafana':
+    grafana:
+      baseUrl: ${GRAFANA_BASE_URL}
+      apiKey: ${GRAFANA_API_KEY} 

@@ -1,0 +1,213 @@
+# Default values for nodejs-service
+replicaCount: 1
+
+image:
+  repository: nodejs-service
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: service.company.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: service-tls
+      hosts:
+        - service.company.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+env:
+  - name: NODE_ENV
+    value: "production"
+  - name: PORT
+    value: "3000"
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: service-secrets
+        key: database-url
+  - name: REDIS_URL
+    valueFrom:
+      secretKeyRef:
+        name: service-secrets
+        key: redis-url
+  - name: JWT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: service-secrets
+        key: jwt-secret
+  - name: API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: service-secrets
+        key: api-key
+
+configMap:
+  config.yaml: |
+    app:
+      name: "{{ .Values.nameOverride }}"
+      version: "{{ .Values.image.tag }}"
+    
+    server:
+      port: 3000
+      host: 0.0.0.0
+    
+    database:
+      url: ${DATABASE_URL}
+      pool:
+        min: 2
+        max: 10
+    
+    redis:
+      url: ${REDIS_URL}
+    
+    auth:
+      jwtSecret: ${JWT_SECRET}
+      apiKey: ${API_KEY}
+    
+    logging:
+      level: info
+      format: json
+    
+    monitoring:
+      enabled: true
+      metrics:
+        enabled: true
+        port: 9090
+      health:
+        enabled: true
+        port: 8080
+
+postgresql:
+  enabled: true
+  auth:
+    database: service
+    username: service
+    password: ""
+
+redis:
+  enabled: true
+  auth:
+    password: ""
+
+secrets:
+  enabled: true
+  data:
+    database-url: ""
+    redis-url: ""
+    jwt-secret: ""
+    api-key: ""
+
+# Service-specific configurations
+service:
+  name: "my-service"
+  description: "A Node.js microservice"
+  version: "1.0.0"
+  owner: "team-name"
+  repository: "https://github.com/company/service-name"
+  
+  # API configuration
+  api:
+    prefix: "/api/v1"
+    cors:
+      enabled: true
+      origin: "*"
+    rateLimit:
+      enabled: true
+      windowMs: 900000
+      max: 100
+    
+  # Monitoring configuration
+  monitoring:
+    prometheus:
+      enabled: true
+      path: "/metrics"
+    grafana:
+      enabled: true
+      dashboard:
+        enabled: true
+    
+  # Security configuration
+  security:
+    helmet:
+      enabled: true
+    rateLimit:
+      enabled: true
+    cors:
+      enabled: true
+    
+  # Database configuration
+  database:
+    migrations:
+      enabled: true
+      autoRun: true
+    seeding:
+      enabled: false
+      data: []
+    
+  # Cache configuration
+  cache:
+    redis:
+      enabled: true
+      ttl: 3600
+    
+  # External services
+  external:
+    auth:
+      enabled: true
+      provider: "oauth2"
+    email:
+      enabled: false
+      provider: "sendgrid"
+    storage:
+      enabled: false
+      provider: "aws-s3" 

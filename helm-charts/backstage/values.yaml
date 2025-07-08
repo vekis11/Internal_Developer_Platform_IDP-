@@ -1,0 +1,518 @@
+# Default values for backstage
+replicaCount: 1
+
+image:
+  repository: internal-developer-platform
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: backstage.company.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: backstage-tls
+      hosts:
+        - backstage.company.com
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+env:
+  - name: NODE_ENV
+    value: "production"
+  - name: AUTH_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: auth-secret
+  - name: GITHUB_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: github-token
+  - name: GITLAB_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: gitlab-token
+  - name: AZURE_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: azure-token
+  - name: BITBUCKET_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: bitbucket-username
+  - name: BITBUCKET_APP_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: bitbucket-app-password
+  - name: AUTH_GITHUB_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: auth-github-client-id
+  - name: AUTH_GITHUB_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: auth-github-client-secret
+  - name: AUTH_GITLAB_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: auth-gitlab-client-id
+  - name: AUTH_GITLAB_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: auth-gitlab-client-secret
+  - name: AUTH_OKTA_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: auth-okta-client-id
+  - name: AUTH_OKTA_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: auth-okta-client-secret
+  - name: AUTH_OKTA_AUDIENCE
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: auth-okta-audience
+  - name: AUTH_OKTA_AUTH_SERVER_ID
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: auth-okta-auth-server-id
+  - name: K8S_SERVICE_ACCOUNT_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: k8s-service-account-token
+  - name: K8S_STAGING_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: k8s-staging-token
+  - name: K8S_PROD_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: k8s-prod-token
+  - name: ARGOCD_BASE_URL
+    value: "https://argocd.company.com"
+  - name: ARGOCD_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: argocd-username
+  - name: ARGOCD_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: argocd-password
+  - name: ARGOCD_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: argocd-token
+  - name: JENKINS_BASE_URL
+    value: "https://jenkins.company.com"
+  - name: JENKINS_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: jenkins-username
+  - name: JENKINS_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: jenkins-api-key
+  - name: SONARQUBE_BASE_URL
+    value: "https://sonarqube.company.com"
+  - name: SONARQUBE_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: sonarqube-api-key
+  - name: PROMETHEUS_BASE_URL
+    value: "https://prometheus.company.com"
+  - name: GRAFANA_BASE_URL
+    value: "https://grafana.company.com"
+  - name: GRAFANA_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: grafana-api-key
+  - name: ROLLBAR_ORGANIZATION
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: rollbar-organization
+  - name: ROLLBAR_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: rollbar-api-token
+  - name: SENTRY_ORGANIZATION
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: sentry-organization
+  - name: SENTRY_PROJECT
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: sentry-project
+  - name: SENTRY_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: sentry-token
+  - name: PAGERDUTY_INTEGRATION_KEY
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: pagerduty-integration-key
+  - name: AIRBRAKE_PROJECT_ID
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: airbrake-project-id
+  - name: AIRBRAKE_PROJECT_KEY
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: airbrake-project-key
+  - name: DYNATRACE_BASE_URL
+    value: "https://dynatrace.company.com"
+  - name: DYNATRACE_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: dynatrace-api-token
+  - name: NEWRELIC_ACCOUNT_ID
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: newrelic-account-id
+  - name: NEWRELIC_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: newrelic-api-key
+  - name: AWS_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: aws-access-key-id
+  - name: AWS_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: aws-secret-access-key
+
+configMap:
+  app-config.yaml: |
+    app:
+      title: Internal Developer Platform
+      baseUrl: https://backstage.company.com
+      support:
+        url: https://github.com/your-org/internal-developer-platform/issues
+
+    organization:
+      name: Your Organization
+
+    backend:
+      baseUrl: https://backstage.company.com
+      listen:
+        port: 7007
+        host: 0.0.0.0
+      cors:
+        origin: https://backstage.company.com
+        credentials: true
+      database:
+        client: postgresql
+        connection:
+          host: {{ .Release.Name }}-postgresql
+          port: 5432
+          user: {{ .Values.postgresql.auth.username }}
+          password: {{ .Values.postgresql.auth.password }}
+          database: {{ .Values.postgresql.auth.database }}
+      auth:
+        keys:
+          - secret: ${AUTH_SECRET}
+      cache:
+        store: redis
+        connection:
+          host: {{ .Release.Name }}-redis-master
+          port: 6379
+          password: {{ .Values.redis.auth.password }}
+
+    integrations:
+      github:
+        - host: github.com
+          token: ${GITHUB_TOKEN}
+      gitlab:
+        - host: gitlab.com
+          token: ${GITLAB_TOKEN}
+      azure:
+        - host: dev.azure.com
+          token: ${AZURE_TOKEN}
+      bitbucket:
+        - host: bitbucket.org
+          username: ${BITBUCKET_USERNAME}
+          appPassword: ${BITBUCKET_APP_PASSWORD}
+
+    scaffolder:
+      github:
+        token: ${GITHUB_TOKEN}
+        visibility: public
+      gitlab:
+        api:
+          token: ${GITLAB_TOKEN}
+      azure:
+        token: ${AZURE_TOKEN}
+      bitbucket:
+        username: ${BITBUCKET_USERNAME}
+        appPassword: ${BITBUCKET_APP_PASSWORD}
+
+    catalog:
+      import:
+        entityFilename: catalog-info.yaml
+        pullRequestBranchName: backstage-integration
+      rules:
+        - allow: [Component, System, API, Resource, Location]
+      locations:
+        - type: url
+          target: https://github.com/your-org/internal-developer-platform/blob/main/catalog/entities.yaml
+
+      processors:
+        githubOrg:
+          providers:
+            - target: https://github.com
+              apiBaseUrl: https://api.github.com
+              token: ${GITHUB_TOKEN}
+        gitlabOrg:
+          providers:
+            - target: https://gitlab.com
+              token: ${GITLAB_TOKEN}
+
+    techdocs:
+      requestUrl: https://backstage.company.com
+      storageUrl: https://backstage.company.com/api/techdocs/static/docs
+      builder: 'local'
+      generators:
+        techdocs: 'docker'
+
+    search:
+      elasticsearch:
+        provider: aws
+        aws:
+          region: us-west-2
+          auth:
+            accessKeyId: ${AWS_ACCESS_KEY_ID}
+            secretAccessKey: ${AWS_SECRET_ACCESS_KEY}
+
+    auth:
+      environment: production
+      providers:
+        github:
+          development:
+            clientId: ${AUTH_GITHUB_CLIENT_ID}
+            clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+        gitlab:
+          development:
+            clientId: ${AUTH_GITLAB_CLIENT_ID}
+            clientSecret: ${AUTH_GITLAB_CLIENT_SECRET}
+        okta:
+          development:
+            clientId: ${AUTH_OKTA_CLIENT_ID}
+            clientSecret: ${AUTH_OKTA_CLIENT_SECRET}
+            audience: ${AUTH_OKTA_AUDIENCE}
+            authServerId: ${AUTH_OKTA_AUTH_SERVER_ID}
+
+    permission:
+      enabled: true
+      rbac:
+        admin:
+          users:
+            - name: user:default/guest
+              resourceRef: user:default/guest
+
+    kubernetes:
+      serviceLocatorMethod:
+        type: 'multiTenant'
+      clusterLocatorMethods:
+        - type: 'config'
+          clusters:
+            - name: 'development'
+              url: 'https://kubernetes.default.svc'
+              authProvider: 'serviceAccount'
+              serviceAccountToken: ${K8S_SERVICE_ACCOUNT_TOKEN}
+            - name: 'staging'
+              url: 'https://staging-cluster.example.com'
+              authProvider: 'serviceAccount'
+              serviceAccountToken: ${K8S_STAGING_TOKEN}
+            - name: 'production'
+              url: 'https://production-cluster.example.com'
+              authProvider: 'serviceAccount'
+              serviceAccountToken: ${K8S_PROD_TOKEN}
+
+    plugins:
+      'backstage-plugin-kubernetes':
+        serviceLocatorMethod:
+          type: 'multiTenant'
+        clusterLocatorMethods:
+          - type: 'config'
+            clusters:
+              - name: 'development'
+                url: 'https://kubernetes.default.svc'
+                authProvider: 'serviceAccount'
+                serviceAccountToken: ${K8S_SERVICE_ACCOUNT_TOKEN}
+              - name: 'staging'
+                url: 'https://staging-cluster.example.com'
+                authProvider: 'serviceAccount'
+                serviceAccountToken: ${K8S_STAGING_TOKEN}
+              - name: 'production'
+                url: 'https://production-cluster.example.com'
+                authProvider: 'serviceAccount'
+                serviceAccountToken: ${K8S_PROD_TOKEN}
+
+      'backstage-plugin-argocd':
+        argocd:
+          baseUrl: ${ARGOCD_BASE_URL}
+          username: ${ARGOCD_USERNAME}
+          password: ${ARGOCD_PASSWORD}
+          token: ${ARGOCD_TOKEN}
+
+      'backstage-plugin-github-actions':
+        github:
+          token: ${GITHUB_TOKEN}
+
+      'backstage-plugin-jenkins':
+        jenkins:
+          baseUrl: ${JENKINS_BASE_URL}
+          username: ${JENKINS_USERNAME}
+          apiKey: ${JENKINS_API_KEY}
+
+      'backstage-plugin-sonarqube':
+        sonarqube:
+          baseUrl: ${SONARQUBE_BASE_URL}
+          apiKey: ${SONARQUBE_API_KEY}
+
+      'backstage-plugin-prometheus':
+        prometheus:
+          baseUrl: ${PROMETHEUS_BASE_URL}
+
+      'backstage-plugin-grafana':
+        grafana:
+          baseUrl: ${GRAFANA_BASE_URL}
+          apiKey: ${GRAFANA_API_KEY}
+
+postgresql:
+  enabled: true
+  auth:
+    database: backstage
+    username: backstage
+    password: ""
+
+redis:
+  enabled: true
+  auth:
+    password: ""
+
+secrets:
+  enabled: true
+  data:
+    auth-secret: ""
+    github-token: ""
+    gitlab-token: ""
+    azure-token: ""
+    bitbucket-username: ""
+    bitbucket-app-password: ""
+    auth-github-client-id: ""
+    auth-github-client-secret: ""
+    auth-gitlab-client-id: ""
+    auth-gitlab-client-secret: ""
+    auth-okta-client-id: ""
+    auth-okta-client-secret: ""
+    auth-okta-audience: ""
+    auth-okta-auth-server-id: ""
+    k8s-service-account-token: ""
+    k8s-staging-token: ""
+    k8s-prod-token: ""
+    argocd-username: ""
+    argocd-password: ""
+    argocd-token: ""
+    jenkins-username: ""
+    jenkins-api-key: ""
+    sonarqube-api-key: ""
+    grafana-api-key: ""
+    rollbar-organization: ""
+    rollbar-api-token: ""
+    sentry-organization: ""
+    sentry-project: ""
+    sentry-token: ""
+    pagerduty-integration-key: ""
+    airbrake-project-id: ""
+    airbrake-project-key: ""
+    dynatrace-api-token: ""
+    newrelic-account-id: ""
+    newrelic-api-key: ""
+    aws-access-key-id: ""
+    aws-secret-access-key: "" 
