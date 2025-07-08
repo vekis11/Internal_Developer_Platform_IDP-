@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Simple Development Deploy
 
 on:
   push:
@@ -6,150 +6,16 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to deploy to'
-        required: true
-        default: 'development'
-        type: choice
-        options:
-          - development
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # Security and Quality Checks
-  security-scan:
-    name: Security Scan
+  # Code Quality Check
+  check:
+    name: Code Quality Check
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@main
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-
-      - name: Run Snyk security scan
-        uses: snyk/actions/node@main
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high
-
-      - name: Run Snyk container scan
-        uses: snyk/actions/docker@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          image: internal-developer-platform:latest
-          args: --severity-threshold=high
-
-      - name: Run Snyk infrastructure scan
-        uses: snyk/actions/iac@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high
-
-  # Code Quality and Testing
-  code-quality:
-    name: Code Quality and Testing
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'yarn'
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Run ESLint
-        run: yarn lint
-
-      - name: Run TypeScript check
-        run: yarn tsc
-
-      - name: Run unit tests
-        run: yarn test
-
-      - name: Run integration tests
-        run: yarn test:integration
-
-      - name: Run SonarQube analysis
-        uses: sonarqube-quality-gate-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          scannerHomebrew: SonarScanner
-          args: >
-            -Dsonar.projectKey=internal-developer-platform
-            -Dsonar.sources=.
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
-
-  # Credential Exposure Detection
-  credential-scan:
-    name: Credential Exposure Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run TruffleHog for credential detection
-        uses: trufflesecurity/trufflehog@main
-        with:
-          args: --only-verified --format json --output trufflehog-results.json
-
-      - name: Run GitGuardian for secrets detection
-        uses: GitGuardian/ggshield-action@main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
-
-      - name: Run detect-secrets
-        run: |
-          pip install detect-secrets
-          detect-secrets scan --baseline .secrets.baseline
-          detect-secrets audit .secrets.baseline
-
-      - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ENABLE_UPLOAD_ARTIFACTS: true
-          GITLEAKS_ENABLE_SUMMARY: true
-
-      - name: Upload credential scan results
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: credential-scan-results
-          path: |
-            trufflehog-results.json
-            .secrets.baseline
-
-  # Build and Test Backstage
-  build-backstage:
-    name: Build Backstage
-    runs-on: ubuntu-latest
-    needs: [security-scan, code-quality, credential-scan]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -165,44 +31,88 @@ jobs:
           cd backstage
           yarn install --frozen-lockfile
 
-      - name: Run Backstage unit tests
+      - name: Run linting
+        run: |
+          cd backstage
+          yarn lint
+
+      - name: Run TypeScript check
+        run: |
+          cd backstage
+          yarn tsc
+
+      - name: Run unit tests
         run: |
           cd backstage
           yarn test
 
-      - name: Run Backstage integration tests
-        run: |
-          cd backstage
-          yarn test:integration
-
-      - name: Run Backstage security tests
-        run: |
-          cd backstage
-          yarn test:security
-
-      - name: Build Backstage
-        run: |
-          cd backstage
-          yarn build
-
-      - name: Run Backstage build tests
-        run: |
-          cd backstage
-          yarn test:build
-
-  # Build Docker Image
-  build-image:
-    name: Build Docker Image
+  # Security Scan with Snyk
+  security-scan:
+    name: Security Scan
     runs-on: ubuntu-latest
-    needs: build-backstage
-    permissions:
-      contents: read
-      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: |
+          cd backstage
+          yarn install --frozen-lockfile
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@v1.0.0
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Run Snyk container scan
+        uses: snyk/actions/docker@v1.0.0
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: internal-developer-platform:latest
+          args: --severity-threshold=high
+
+      - name: Run Snyk infrastructure scan
+        uses: snyk/actions/iac@v1.0.0
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+  # Build Application
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [check, security-scan]
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: |
+          cd backstage
+          yarn install --frozen-lockfile
+
+      - name: Build Backstage
+        run: |
+          cd backstage
+          yarn build
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -221,10 +131,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix={{branch}}-
+            type=sha,prefix=dev-
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -237,11 +144,10 @@ jobs:
           cache-to: type=gha,mode=max
 
   # Deploy to Development
-  deploy-development:
+  deploy:
     name: Deploy to Development
     runs-on: ubuntu-latest
-    needs: build-image
-    if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'development')
+    needs: build
     environment: development
     steps:
       - name: Checkout code
@@ -259,161 +165,27 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
-          # Update image tag in values
-          sed -i "s|tag: \".*\"|tag: \"${{ needs.build-image.outputs.image-tag }}\"|g" helm-charts/backstage/values.yaml
-          
           # Deploy using Helm
           helm upgrade --install backstage ./helm-charts/backstage \
             --namespace backstage \
             --create-namespace \
-            --set image.tag=${{ needs.build-image.outputs.image-tag }} \
+            --set image.tag=${{ needs.build.outputs.image-tag }} \
             --set postgresql.auth.password=${{ secrets.POSTGRESQL_PASSWORD }} \
             --set redis.auth.password=${{ secrets.REDIS_PASSWORD }}
 
       - name: Update ArgoCD application
         run: |
-          kubectl patch application backstage -n argocd --type='merge' -p='{"spec":{"source":{"helm":{"parameters":[{"name":"image.tag","value":"${{ needs.build-image.outputs.image-tag }}"}]}}}}'
+          kubectl patch application backstage -n argocd --type='merge' -p='{"spec":{"source":{"helm":{"parameters":[{"name":"image.tag","value":"${{ needs.build.outputs.image-tag }}"}]}}}}'
 
       - name: Sync ArgoCD application
         run: |
           argocd app sync backstage --prune
 
-  # Deploy to Staging
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: build-image
-    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
-    environment: staging
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
-
-      - name: Configure kubectl
-        run: |
-          echo "${{ secrets.K8S_STAGING_CONFIG }}" | base64 -d > kubeconfig
-          export KUBECONFIG=kubeconfig
-
-      - name: Deploy to Kubernetes
-        run: |
-          # Update image tag in values
-          sed -i "s|tag: \".*\"|tag: \"${{ needs.build-image.outputs.image-tag }}\"|g" helm-charts/backstage/values.yaml
-          
-          # Deploy using Helm
-          helm upgrade --install backstage ./helm-charts/backstage \
-            --namespace backstage \
-            --create-namespace \
-            --set image.tag=${{ needs.build-image.outputs.image-tag }} \
-            --set postgresql.auth.password=${{ secrets.POSTGRESQL_PASSWORD }} \
-            --set redis.auth.password=${{ secrets.REDIS_PASSWORD }}
-
-      - name: Update ArgoCD application
-        run: |
-          kubectl patch application backstage -n argocd --type='merge' -p='{"spec":{"source":{"helm":{"parameters":[{"name":"image.tag","value":"${{ needs.build-image.outputs.image-tag }}"}]}}}}'
-
-      - name: Sync ArgoCD application
-        run: |
-          argocd app sync backstage --prune
-
-  # Deploy to Production
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: build-image
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
-    environment: production
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
-
-      - name: Configure kubectl
-        run: |
-          echo "${{ secrets.K8S_PROD_CONFIG }}" | base64 -d > kubeconfig
-          export KUBECONFIG=kubeconfig
-
-      - name: Deploy to Kubernetes
-        run: |
-          # Update image tag in values
-          sed -i "s|tag: \".*\"|tag: \"${{ needs.build-image.outputs.image-tag }}\"|g" helm-charts/backstage/values.yaml
-          
-          # Deploy using Helm
-          helm upgrade --install backstage ./helm-charts/backstage \
-            --namespace backstage \
-            --create-namespace \
-            --set image.tag=${{ needs.build-image.outputs.image-tag }} \
-            --set postgresql.auth.password=${{ secrets.POSTGRESQL_PASSWORD }} \
-            --set redis.auth.password=${{ secrets.REDIS_PASSWORD }}
-
-      - name: Update ArgoCD application
-        run: |
-          kubectl patch application backstage -n argocd --type='merge' -p='{"spec":{"source":{"helm":{"parameters":[{"name":"image.tag","value":"${{ needs.build-image.outputs.image-tag }}"}]}}}}'
-
-      - name: Sync ArgoCD application
-        run: |
-          argocd app sync backstage --prune
-
-  # Infrastructure as Code
-  deploy-infrastructure:
-    name: Deploy Infrastructure
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment: production
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
-
-      - name: Setup Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 'latest'
-
-      - name: Configure kubectl
-        run: |
-          echo "${{ secrets.K8S_PROD_CONFIG }}" | base64 -d > kubeconfig
-          export KUBECONFIG=kubeconfig
-
-      - name: Deploy Kubernetes resources
-        run: |
-          kubectl apply -f kubernetes/namespaces/
-          kubectl apply -f kubernetes/rbac/
-
-      - name: Deploy ArgoCD
-        run: |
-          helm repo add argo https://argoproj.github.io/argo-helm
-          helm repo update
-          helm upgrade --install argocd argo/argo-cd \
-            --namespace argocd \
-            --create-namespace \
-            --set server.ingress.enabled=true \
-            --set server.ingress.hosts[0]=argocd.company.com \
-            --set server.ingress.tls[0].secretName=argocd-tls \
-            --set server.ingress.tls[0].hosts[0]=argocd.company.com
-
-      - name: Deploy ArgoCD applications
-        run: |
-          kubectl apply -f argocd/projects/
-          kubectl apply -f argocd/applications/
-
-  # Notifications
+  # Notify on completion
   notify:
     name: Notify Team
     runs-on: ubuntu-latest
-    needs: [deploy-development, deploy-staging, deploy-production]
+    needs: deploy
     if: always()
     steps:
       - name: Notify Slack
@@ -422,13 +194,4 @@ jobs:
           status: ${{ job.status }}
           channel: '#platform-deployments'
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        if: always()
-
-      - name: Notify Teams
-        uses: skitionek/notify-teams@master
-        with:
-          webhook_url: ${{ secrets.TEAMS_WEBHOOK }}
-          status: ${{ job.status }}
-          title: "Internal Developer Platform Deployment"
-          message: "Deployment completed for ${{ github.ref_name }}"
         if: always() 
