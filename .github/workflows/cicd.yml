@@ -31,7 +31,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.19.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -45,14 +45,14 @@ jobs:
           sarif_file: 'trivy-results.sarif'
 
       - name: Run Snyk security scan
-        uses: snyk/actions/node@master
+        uses: snyk/actions/node@v1.0.0
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high
 
       - name: Run Snyk container scan
-        uses: snyk/actions/docker@master
+        uses: snyk/actions/docker@v1.0.0
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
@@ -60,7 +60,7 @@ jobs:
           args: --severity-threshold=high
 
       - name: Run Snyk infrastructure scan
-        uses: snyk/actions/iac@master
+        uses: snyk/actions/iac@v1.0.0
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
@@ -96,7 +96,7 @@ jobs:
         run: yarn test:integration
 
       - name: Run SonarQube analysis
-        uses: sonarqube-quality-gate-action@master
+        uses: sonarqube-quality-gate-action@v1.0.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
@@ -427,7 +427,7 @@ jobs:
         if: always()
 
       - name: Notify Teams
-        uses: skitionek/notify-teams@master
+        uses: skitionek/notify-teams@v1.0.0
         with:
           webhook_url: ${{ secrets.TEAMS_WEBHOOK }}
           status: ${{ job.status }}
